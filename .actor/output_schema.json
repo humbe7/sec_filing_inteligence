@@ -1,0 +1,11 @@
+{
+  "actorOutputSchemaVersion": 1,
+  "title": "SEC Filing Intelligence Output",
+  "properties": {
+    "results": {
+      "type": "string",
+      "title": "Analysis Results",
+      "template": "{{links.apiDefaultDatasetUrl}}/items"
+    }
+  }
+}

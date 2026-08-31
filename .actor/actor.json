@@ -1,0 +1,13 @@
+{
+  "actorSpecification": 1,
+  "name": "sec-filing-intelligence",
+  "title": "SEC Filing Intelligence",
+  "description": "Turn SEC 10-Q, 10-K, and 8-K filings into structured, explainable intelligence.",
+  "version": "1.0",
+  "buildTag": "latest",
+  "input": "./input_schema.json",
+  "output": "./output_schema.json",
+  "minMemoryMbytes": 256,
+  "defaultMemoryMbytes": 512,
+  "maxMemoryMbytes": 1024
+}

@@ -1,0 +1,71 @@
+{
+  "title": "SEC Filing Intelligence",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "ticker": {
+      "title": "Ticker Symbol",
+      "description": "Stock ticker symbol (e.g., NVDA, AAPL)",
+      "type": "string",
+      "pattern": "^[A-Z]{1,5}$",
+      "example": "NVDA"
+    },
+    "filingType": {
+      "title": "Filing Type",
+      "description": "Type of SEC filing to analyze",
+      "type": "string",
+      "enum": ["10-Q", "10-K", "8-K"],
+      "default": "10-Q"
+    },
+    "comparePrevious": {
+      "title": "Compare Previous Filing",
+      "description": "Whether to find and compare with previous filing",
+      "type": "boolean",
+      "default": true
+    },
+    "includeAIAnalysis": {
+      "title": "Include AI Analysis",
+      "description": "Include AI-powered filing intelligence. Requires OPENAI_API_KEY.",
+      "type": "boolean",
+      "default": false
+    },
+    "analysis": {
+      "title": "Analysis Options",
+      "description": "Specific analysis components to include",
+      "type": "object",
+      "properties": {
+        "financials": {
+          "type": "boolean",
+          "default": true,
+          "description": "Extract and compare financial metrics"
+        },
+        "riskFactors": {
+          "type": "boolean",
+          "default": false,
+          "description": "Analyze risk factor changes with AI"
+        },
+        "managementTone": {
+          "type": "boolean",
+          "default": false,
+          "description": "Analyze management tone with AI"
+        },
+        "guidance": {
+          "type": "boolean",
+          "default": false,
+          "description": "Detect guidance and outlook changes with AI"
+        },
+        "liquidity": {
+          "type": "boolean",
+          "default": false,
+          "description": "Analyze liquidity changes (requires AI)"
+        },
+        "legal": {
+          "type": "boolean",
+          "default": false,
+          "description": "Analyze legal and regulatory developments with AI"
+        }
+      }
+    }
+  },
+  "required": ["ticker"]
+}
