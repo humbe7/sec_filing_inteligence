@@ -183,7 +183,7 @@ ENABLE_CACHE=true
 - `ticker` *(string, required)* - Stock ticker symbol (1-5 uppercase letters)
 - `filingType` *(string, default: "10-Q")* - Filing type: "10-Q", "10-K", "8-K"
 - `comparePrevious` *(boolean, default: true)* - Find comparable previous filing
-- `includeAIAnalysis` *(boolean, default: false)* - Include AI intelligence; requires `OPENAI_API_KEY`
+- `includeAIAnalysis` *(boolean, default: false)* - Include AI intelligence; requires `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`
 - `analysis` *(object, optional)* - Specific analysis components
 
 ### Output Schema (Phase 4)
@@ -264,7 +264,7 @@ ENABLE_CACHE=true
 }
 ```
 
-AI analysis is opt-in. Set `includeAIAnalysis: true` and configure `OPENAI_API_KEY`; optional `OPENAI_BASE_URL` and `OPENAI_MODEL` support OpenAI-compatible providers. When no core AI option is selected, the actor runs risk, tone, guidance, and legal analysis. AI responses are schema-validated and include filing evidence; they are informational and not investment advice.
+AI analysis is opt-in. Set `includeAIAnalysis: true` and configure `OPENAI_API_KEY` for OpenAI-compatible providers or `ANTHROPIC_API_KEY` for Claude's native Messages API. Optional provider-specific base URL, model, and timeout environment variables are documented in `.env.example`. When both keys are set, Anthropic takes precedence. When no core AI option is selected, the actor runs risk, tone, guidance, and legal analysis. AI responses are schema-validated and include filing evidence; they are informational and not investment advice.
 
 ### Explainable Scoring (Phase 5)
 

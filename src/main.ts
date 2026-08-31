@@ -27,7 +27,7 @@ import { FilingDownloader } from './sec/filingDownloader.js';
 import { parseFiling } from './filings/filingParser.js';
 import { extractSections } from './filings/sectionExtractor.js';
 import { compareSections } from './comparison/textualDiff.js';
-import { OpenAiCompatibleLlmClient } from './ai/llmClient.js';
+import { AnthropicMessagesLlmClient, LlmClient, OpenAiCompatibleLlmClient } from './ai/llmClient.js';
 import { analyzeGuidance, analyzeLegal, analyzeRisks, analyzeTone } from './intelligence/analyzers.js';
 import { calculateFilingScores } from './scoring/scoringEngine.js';
 import { analyzeEightK } from './events/eightKAnalyzer.js';
@@ -347,22 +347,33 @@ async function main(): Promise<void> {
     if (input.includeAIAnalysis) {
       if (!phase3Output?.sections) {
         runLogger.warn('Phase 4 requires comparable filing sections; AI analysis skipped');
-      } else if (!process.env.OPENAI_API_KEY) {
-        runLogger.warn('Phase 4 requested but OPENAI_API_KEY is not configured; AI analysis skipped');
+      } else if (!process.env.OPENAI_API_KEY && !process.env.ANTHROPIC_API_KEY) {
+        runLogger.warn('Phase 4 requested but no LLM API key is configured; AI analysis skipped');
       } else {
         runLogger.info('Phase 4: Starting AI intelligence analysis');
 
-        const client = new OpenAiCompatibleLlmClient({
-          apiKey: process.env.OPENAI_API_KEY,
-          baseUrl: process.env.OPENAI_BASE_URL,
-          model: process.env.OPENAI_MODEL,
-          timeoutMs: process.env.OPENAI_TIMEOUT_MS
-            ? Number.parseInt(process.env.OPENAI_TIMEOUT_MS, 10)
-            : undefined,
-          maxOutputTokens: process.env.MAX_OUTPUT_TOKENS
-            ? Number.parseInt(process.env.MAX_OUTPUT_TOKENS, 10)
-            : undefined,
-        });
+        const maxOutputTokens = process.env.MAX_OUTPUT_TOKENS
+          ? Number.parseInt(process.env.MAX_OUTPUT_TOKENS, 10)
+          : undefined;
+        const client: LlmClient = process.env.ANTHROPIC_API_KEY
+          ? new AnthropicMessagesLlmClient({
+              apiKey: process.env.ANTHROPIC_API_KEY,
+              baseUrl: process.env.ANTHROPIC_BASE_URL,
+              model: process.env.ANTHROPIC_MODEL,
+              timeoutMs: process.env.ANTHROPIC_TIMEOUT_MS
+                ? Number.parseInt(process.env.ANTHROPIC_TIMEOUT_MS, 10)
+                : undefined,
+              maxOutputTokens,
+            })
+          : new OpenAiCompatibleLlmClient({
+              apiKey: process.env.OPENAI_API_KEY as string,
+              baseUrl: process.env.OPENAI_BASE_URL,
+              model: process.env.OPENAI_MODEL,
+              timeoutMs: process.env.OPENAI_TIMEOUT_MS
+                ? Number.parseInt(process.env.OPENAI_TIMEOUT_MS, 10)
+                : undefined,
+              maxOutputTokens,
+            });
         const context = {
           current: phase3Output.sections.current,
           previous: phase3Output.sections.previous,
