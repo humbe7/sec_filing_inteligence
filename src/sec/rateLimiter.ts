@@ -12,6 +12,7 @@ export interface RateLimiterOptions {
  * Global rate limiter state
  */
 let globalLastRequestTime = 0;
+let globalRequestQueue: Promise<void> = Promise.resolve();
 
 export class RateLimiter {
   private requestTimes: number[] = [];
@@ -69,15 +70,17 @@ export class RateLimiter {
    * Global rate limiter (across all instances)
    */
   private async waitGlobal(): Promise<void> {
-    const now = Date.now();
-    const timeSinceLastRequest = now - globalLastRequestTime;
-
-    if (timeSinceLastRequest < this.minIntervalMs) {
-      const waitTime = this.minIntervalMs - timeSinceLastRequest;
-      await new Promise(resolve => setTimeout(resolve, waitTime));
-    }
-
-    globalLastRequestTime = Date.now();
+    // Serialize slot allocation so concurrent callers cannot form a burst.
+    const slot = globalRequestQueue.then(async () => {
+      const now = Date.now();
+      const timeSinceLastRequest = now - globalLastRequestTime;
+      if (timeSinceLastRequest < this.minIntervalMs) {
+        await new Promise(resolve => setTimeout(resolve, this.minIntervalMs - timeSinceLastRequest));
+      }
+      globalLastRequestTime = Date.now();
+    });
+    globalRequestQueue = slot.catch(() => undefined);
+    await slot;
   }
 
   /**
@@ -86,6 +89,7 @@ export class RateLimiter {
   reset(): void {
     this.requestTimes = [];
     globalLastRequestTime = 0;
+    globalRequestQueue = Promise.resolve();
   }
 
   /**

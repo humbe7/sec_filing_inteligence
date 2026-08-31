@@ -100,8 +100,11 @@ export class FilingResolver {
     cik: string,
   ): Promise<FilingMetadata | null> {
     if (!currentFiling.reportDate) {
-      // Can't compare without report date
-      return this.filingToMetadata(candidates[1], cik);
+      this.logger.warn('Cannot safely find comparable quarterly filing without a report date', {
+        cik,
+        accessionNumber: currentFiling.accessionNumber,
+      });
+      return null;
     }
 
     const currentDate = new Date(currentFiling.reportDate);
@@ -124,9 +127,8 @@ export class FilingResolver {
       return this.filingToMetadata(sameQuarterPreviousYear, cik);
     }
 
-    // Fallback: previous quarter
-    this.logger.debug('No YoY match found, using previous quarter', { cik });
-    return this.filingToMetadata(candidates[1], cik);
+    this.logger.warn('No comparable prior-year quarter found', { cik });
+    return null;
   }
 
   /**
@@ -138,7 +140,11 @@ export class FilingResolver {
     cik: string,
   ): Promise<FilingMetadata | null> {
     if (!currentFiling.reportDate) {
-      return this.filingToMetadata(candidates[1], cik);
+      this.logger.warn('Cannot safely find comparable annual filing without a report date', {
+        cik,
+        accessionNumber: currentFiling.accessionNumber,
+      });
+      return null;
     }
 
     const currentDate = new Date(currentFiling.reportDate);
@@ -155,8 +161,8 @@ export class FilingResolver {
       return this.filingToMetadata(previousYear, cik);
     }
 
-    // Fallback
-    return this.filingToMetadata(candidates[1], cik);
+    this.logger.warn('No comparable prior-year annual filing found', { cik });
+    return null;
   }
 
   /**

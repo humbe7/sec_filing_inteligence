@@ -15,6 +15,7 @@ import {
   FinancialChangeOutput,
   FinancialValueOutput,
   FilingSectionOutput,
+  validateOutput,
 } from './actor/output.js';
 import { SecFilingError } from './actor/errors.js';
 import { SecClient } from './sec/secClient.js';
@@ -54,6 +55,7 @@ async function main(): Promise<void> {
     logger.info('Input validation passed', { ticker: input.ticker, form: input.filingType });
   } catch (error) {
     logger.error('Input validation failed', error);
+    await Actor.exit();
     process.exit(1);
   }
 
@@ -64,9 +66,13 @@ async function main(): Promise<void> {
 
   try {
     // Initialize SEC clients
+    const contactEmail = process.env.SEC_CONTACT_EMAIL;
+    if (process.env.NODE_ENV === 'production' && (!contactEmail || contactEmail === 'contact@example.com')) {
+      throw new SecFilingError('SEC_CONTACT_EMAIL must be configured in production', 'SEC_CONTACT_EMAIL_REQUIRED');
+    }
     const secClient = new SecClient({
       userAgent: 'SECFilingIntelligence/1.0',
-      contactEmail: process.env.SEC_CONTACT_EMAIL || 'contact@example.com',
+      contactEmail: contactEmail || 'contact@example.com',
       requestsPerSecond: process.env.SEC_MAX_REQUESTS_PER_SECOND
         ? parseInt(process.env.SEC_MAX_REQUESTS_PER_SECOND, 10)
         : 8,
@@ -126,6 +132,7 @@ async function main(): Promise<void> {
           currentFiling.filingType,
           [],
           currentFiling.accessionNumber,
+          currentFiling.reportDate,
         );
         runLogger.info('Current metrics extracted', { metricCount: currentMetrics.metrics.size });
 
@@ -137,6 +144,7 @@ async function main(): Promise<void> {
             previousFiling.filingType,
             [],
             previousFiling.accessionNumber,
+            previousFiling.reportDate,
           );
           runLogger.info('Previous metrics extracted', { metricCount: previousMetrics.metrics.size });
         }
@@ -166,6 +174,8 @@ async function main(): Promise<void> {
                     fiscalYear: change.current.fiscalYear,
                     fiscalPeriod: change.current.fiscalPeriod,
                     filingDate: change.current.filingDate,
+                    periodType: change.current.periodType,
+                    durationDays: change.current.durationDays,
                   },
                   previous: {
                     value: change.previous.value,
@@ -177,6 +187,8 @@ async function main(): Promise<void> {
                     fiscalYear: change.previous.fiscalYear,
                     fiscalPeriod: change.previous.fiscalPeriod,
                     filingDate: change.previous.filingDate,
+                    periodType: change.previous.periodType,
+                    durationDays: change.previous.durationDays,
                   },
                   absoluteChange: change.absoluteChange,
                   percentChange: change.percentChange,
@@ -208,6 +220,8 @@ async function main(): Promise<void> {
             fiscalYear: value.fiscalYear,
             fiscalPeriod: value.fiscalPeriod,
             filingDate: value.filingDate,
+            periodType: value.periodType,
+            durationDays: value.durationDays,
           };
         }
 
@@ -224,6 +238,8 @@ async function main(): Promise<void> {
               fiscalYear: value.fiscalYear,
               fiscalPeriod: value.fiscalPeriod,
               filingDate: value.filingDate,
+              periodType: value.periodType,
+              durationDays: value.durationDays,
             };
           }
         }
@@ -390,21 +406,25 @@ async function main(): Promise<void> {
         const includeLegal = analysis?.legal || !selectedCoreAnalysis;
         const aiAnalysis: NonNullable<Phase4Output['aiAnalysis']> = {};
 
-        const tasks: Array<Promise<void>> = [];
+        const configuredMaxAiCalls = Number.parseInt(process.env.MAX_AI_CALLS || '', 10);
+        const maxAiCalls = Number.isFinite(configuredMaxAiCalls)
+          ? Math.min(4, Math.max(1, configuredMaxAiCalls))
+          : 4;
+        const taskFactories: Array<() => Promise<void>> = [];
         if (includeRisk) {
-          tasks.push(analyzeRisks(client, context).then(result => { aiAnalysis.riskFactors = result; }));
+          taskFactories.push(async () => { aiAnalysis.riskFactors = await analyzeRisks(client, context); });
         }
         if (includeTone) {
-          tasks.push(analyzeTone(client, context).then(result => { aiAnalysis.managementTone = result; }));
+          taskFactories.push(async () => { aiAnalysis.managementTone = await analyzeTone(client, context); });
         }
         if (includeGuidance) {
-          tasks.push(analyzeGuidance(client, context).then(result => { aiAnalysis.guidance = result; }));
+          taskFactories.push(async () => { aiAnalysis.guidance = await analyzeGuidance(client, context); });
         }
         if (includeLegal) {
-          tasks.push(analyzeLegal(client, context).then(result => { aiAnalysis.legal = result; }));
+          taskFactories.push(async () => { aiAnalysis.legal = await analyzeLegal(client, context); });
         }
 
-        const results = await Promise.allSettled(tasks);
+        const results = await Promise.allSettled(taskFactories.slice(0, maxAiCalls).map(task => task()));
         const failedAnalyses = results.filter(result => result.status === 'rejected');
         for (const result of failedAnalyses) {
           runLogger.warn('Phase 4 analysis component failed', result.reason);
@@ -498,7 +518,7 @@ async function main(): Promise<void> {
       }
     }
 
-    const output = phase6Output ?? phase5Output ?? phase4Output ?? phase3Output ?? baseOutput;
+    const output = validateOutput(phase6Output ?? phase5Output ?? phase4Output ?? phase3Output ?? baseOutput);
 
     runLogger.info('Phase 1 complete, pushing results to dataset');
 
@@ -528,9 +548,11 @@ async function main(): Promise<void> {
   } catch (error) {
     if (error instanceof SecFilingError) {
       logger.error(`SEC Filing Error: ${error.code}`, error);
+      await Actor.exit();
       process.exit(2);
     } else {
       logger.error('Unexpected error', error);
+      await Actor.exit();
       process.exit(1);
     }
   }

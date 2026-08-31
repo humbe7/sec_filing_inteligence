@@ -9,6 +9,7 @@ import {
   US_GAAP_CONCEPT_MAPPINGS,
   XBRLFact,
   FinancialValue,
+  PeriodType,
 } from './xbrlTypes.js';
 
 export interface MetricResolution {
@@ -109,10 +110,10 @@ export class MetricNormalizer {
 
     // Determine unit
     let unit = 'USD';
-    if (fact.unit.includes('shares')) {
-      unit = 'shares';
-    } else if (fact.unit.includes('per-share')) {
+    if (fact.unit.includes('per-share') || (fact.unit.includes('USD') && fact.unit.includes('shares'))) {
       unit = 'USD/share';
+    } else if (fact.unit.includes('shares')) {
+      unit = 'shares';
     }
 
     return {
@@ -127,6 +128,10 @@ export class MetricNormalizer {
       fiscalPeriod: fact.fp,
       filingDate: fact.filed,
       accessionNumber: fact.accn,
+      periodType: fact.start ? PeriodType.DURATION : PeriodType.INSTANT,
+      durationDays: fact.start
+        ? Math.round((new Date(fact.end).getTime() - new Date(fact.start).getTime()) / (1000 * 60 * 60 * 24))
+        : undefined,
     };
   }
 

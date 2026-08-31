@@ -17,6 +17,18 @@ class StubLlmClient implements LlmClient {
   }
 }
 
+class UngroundedLlmClient implements LlmClient {
+  async completeJson(): Promise<unknown> {
+    return {
+      overallRiskTrend: 'increased',
+      newRisks: ['Invented risk'],
+      removedRisks: [],
+      summary: 'Unsupported claim.',
+      evidence: [{ statement: 'This quote does not exist.', section: 'risk_factors' }],
+    };
+  }
+}
+
 describe('analyzers', () => {
   it('builds a risk prompt from comparable filing sections and validates the result', async () => {
     const client = new StubLlmClient();
@@ -32,5 +44,14 @@ describe('analyzers', () => {
 
     expect(client.prompt).toContain('Tariffs may raise costs.');
     expect(result.newRisks).toEqual(['Tariff exposure']);
+  });
+
+  it('rejects AI evidence that is not present in the filing section', async () => {
+    await expect(analyzeRisks(new UngroundedLlmClient(), {
+      current: {
+        risk_factors: { title: 'Risk Factors', wordCount: 5, text: 'Tariffs may raise costs.' },
+      },
+      textualChanges: [],
+    })).rejects.toThrow('AI evidence is not a verbatim quote');
   });
 });

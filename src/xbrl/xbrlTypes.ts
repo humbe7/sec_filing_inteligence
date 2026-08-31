@@ -95,6 +95,8 @@ export interface FinancialValue {
   fiscalPeriod: string;
   filingDate: string;
   accessionNumber: string;
+  periodType?: PeriodType;
+  durationDays?: number;
   notes?: string;
 }
 
@@ -215,7 +217,8 @@ export const US_GAAP_CONCEPT_MAPPINGS: Record<FinancialMetric, string[]> = {
     'us-gaap:CommercialPaper',
   ],
   [FinancialMetric.TOTAL_DEBT]: [
-    'us-gaap:Liabilities',  // Calculated
+    // Total liabilities are not debt. This value must be calculated from
+    // verified debt concepts rather than mapped directly.
   ],
 
   // Cash Flow

@@ -19,13 +19,27 @@ export interface FilingAnalysisContext {
   textualChanges: TextualChangeOutput[];
 }
 
+function requireGroundedEvidence<T extends { evidence: Array<{ statement: string; section: string }> }>(
+  result: T,
+  context: FilingAnalysisContext,
+): T {
+  const normalize = (value: string) => value.replace(/\s+/g, ' ').trim().toLowerCase();
+  for (const evidence of result.evidence) {
+    const section = context.current[evidence.section] || context.previous?.[evidence.section];
+    if (!section || !normalize(section.text).includes(normalize(evidence.statement))) {
+      throw new Error(`AI evidence is not a verbatim quote from section ${evidence.section}`);
+    }
+  }
+  return result;
+}
+
 export async function analyzeRisks(client: LlmClient, context: FilingAnalysisContext): Promise<RiskAnalysis> {
   const response = await client.completeJson(riskPrompt(
     context.current.risk_factors,
     context.previous?.risk_factors,
     context.textualChanges,
   ));
-  return validateLlmResponse(RiskAnalysisSchema, response, 'risk analysis');
+  return requireGroundedEvidence(validateLlmResponse(RiskAnalysisSchema, response, 'risk analysis'), context);
 }
 
 export async function analyzeTone(client: LlmClient, context: FilingAnalysisContext): Promise<ToneAnalysis> {
@@ -34,7 +48,7 @@ export async function analyzeTone(client: LlmClient, context: FilingAnalysisCont
     context.previous?.management_discussion,
     context.textualChanges,
   ));
-  return validateLlmResponse(ToneAnalysisSchema, response, 'tone analysis');
+  return requireGroundedEvidence(validateLlmResponse(ToneAnalysisSchema, response, 'tone analysis'), context);
 }
 
 export async function analyzeGuidance(client: LlmClient, context: FilingAnalysisContext): Promise<GuidanceAnalysis> {
@@ -43,7 +57,7 @@ export async function analyzeGuidance(client: LlmClient, context: FilingAnalysis
     context.previous?.management_discussion,
     context.textualChanges,
   ));
-  return validateLlmResponse(GuidanceAnalysisSchema, response, 'guidance analysis');
+  return requireGroundedEvidence(validateLlmResponse(GuidanceAnalysisSchema, response, 'guidance analysis'), context);
 }
 
 export async function analyzeLegal(client: LlmClient, context: FilingAnalysisContext): Promise<LegalAnalysis> {
@@ -52,5 +66,5 @@ export async function analyzeLegal(client: LlmClient, context: FilingAnalysisCon
     context.previous?.legal_proceedings,
     context.textualChanges,
   ));
-  return validateLlmResponse(LegalAnalysisSchema, response, 'legal analysis');
+  return requireGroundedEvidence(validateLlmResponse(LegalAnalysisSchema, response, 'legal analysis'), context);
 }

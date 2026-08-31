@@ -51,4 +51,21 @@ describe('RateLimiter', () => {
     const slowLimiter = new RateLimiter({ requestsPerSecond: 1, globalRateLimit: false });
     expect(slowLimiter.getRequestsPerSecond()).toBe(1);
   });
+
+  it('serializes concurrent global requests instead of releasing a burst', async () => {
+    const globalLimiter = new RateLimiter({ requestsPerSecond: 10, globalRateLimit: true });
+    globalLimiter.reset();
+    const timestamps: number[] = [];
+    const requests = Array.from({ length: 3 }, async () => {
+      await globalLimiter.waitForCapacity();
+      timestamps.push(Date.now());
+    });
+
+    await vi.runAllTimersAsync();
+    await Promise.all(requests);
+
+    timestamps.sort((a, b) => a - b);
+    expect(timestamps[1] - timestamps[0]).toBeGreaterThanOrEqual(100);
+    expect(timestamps[2] - timestamps[1]).toBeGreaterThanOrEqual(100);
+  });
 });

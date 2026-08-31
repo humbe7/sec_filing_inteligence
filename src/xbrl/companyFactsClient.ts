@@ -7,6 +7,14 @@ import { SecClient } from '../sec/secClient.js';
 import { CompanyFacts, XBRLFact } from './xbrlTypes.js';
 import { Logger } from '../utils/logger.js';
 
+export interface FactSelectionOptions {
+  accessionNumber?: string;
+  reportDate?: string;
+  periodType?: 'instant' | 'duration';
+  minDurationDays?: number;
+  maxDurationDays?: number;
+}
+
 export class CompanyFactsClient {
   private secClient: SecClient;
   private logger: Logger;
@@ -92,6 +100,7 @@ export class CompanyFactsClient {
     form: string,
     fiscalPeriod?: string,
     accessionNumber?: string,
+    options: FactSelectionOptions = {},
   ): XBRLFact | null {
     if (facts.length === 0) {
       return null;
@@ -100,8 +109,9 @@ export class CompanyFactsClient {
     // Filter by form
     let filtered = facts.filter(f => f.form === form || f.form.startsWith(form));
 
-    if (accessionNumber) {
-      filtered = filtered.filter(f => f.accn === accessionNumber);
+    const selectedAccession = options.accessionNumber || accessionNumber;
+    if (selectedAccession) {
+      filtered = filtered.filter(f => f.accn === selectedAccession);
     }
 
     // Filter by fiscal period if specified
@@ -112,12 +122,40 @@ export class CompanyFactsClient {
       }
     }
 
+    if (options.reportDate) {
+      filtered = filtered.filter(f => f.end === options.reportDate);
+    }
+
+    if (options.periodType === 'instant') {
+      filtered = filtered.filter(f => !f.start);
+    } else if (options.periodType === 'duration') {
+      filtered = filtered.filter(f => this.durationDays(f) !== null);
+    }
+
+    if (options.minDurationDays !== undefined || options.maxDurationDays !== undefined) {
+      filtered = filtered.filter(f => {
+        const durationDays = this.durationDays(f);
+        return durationDays !== null
+          && (options.minDurationDays === undefined || durationDays >= options.minDurationDays)
+          && (options.maxDurationDays === undefined || durationDays <= options.maxDurationDays);
+      });
+    }
+
     if (filtered.length === 0) {
       return null;
     }
 
-    // Sort by filing date (descending) and return most recent
-    return filtered.sort((a, b) => new Date(b.filed).getTime() - new Date(a.filed).getTime())[0];
+    const hasPeriodConstraint = Boolean(
+      options.reportDate || options.periodType || options.minDurationDays !== undefined || options.maxDurationDays !== undefined,
+    );
+    return filtered.sort((a, b) => {
+      if (!hasPeriodConstraint) {
+        return new Date(b.filed).getTime() - new Date(a.filed).getTime();
+      }
+      const durationA = this.durationDays(a) ?? Number.POSITIVE_INFINITY;
+      const durationB = this.durationDays(b) ?? Number.POSITIVE_INFINITY;
+      return durationA - durationB || new Date(b.filed).getTime() - new Date(a.filed).getTime();
+    })[0];
   }
 
   /**
@@ -165,6 +203,14 @@ export class CompanyFactsClient {
    */
   getCacheSize(): number {
     return this.cache.size;
+  }
+
+  private durationDays(fact: XBRLFact): number | null {
+    if (!fact.start) return null;
+    const start = new Date(fact.start).getTime();
+    const end = new Date(fact.end).getTime();
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return null;
+    return Math.round((end - start) / (1000 * 60 * 60 * 24));
   }
 
   /** Normalize the SEC's taxonomy-and-units response into the internal fact map. */

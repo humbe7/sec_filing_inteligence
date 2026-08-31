@@ -57,6 +57,8 @@ export interface FinancialValueOutput {
   fiscalYear: number;
   fiscalPeriod: string;
   filingDate: string;
+  periodType?: 'INSTANT' | 'DURATION';
+  durationDays?: number;
 }
 
 export interface FinancialChangeOutput {
@@ -169,6 +171,26 @@ export interface EightKAnalysisOutput {
   categories: import('../events/eightKAnalyzer.js').EightKCategory[];
 }
 
+const OutputEnvelopeSchema = z.object({
+  company: z.object({
+    ticker: z.string().min(1),
+    cik: z.string().regex(/^\d{10}$/),
+    name: z.string(),
+    sic: z.string(),
+    category: z.string(),
+  }),
+  filing: z.object({
+    current: z.object({ accessionNumber: z.string().min(1), filingType: z.string().min(1) }),
+  }).passthrough(),
+  metadata: z.object({ phase: z.string().min(1), generatedAt: z.string().min(1) }),
+}).passthrough();
+
+/** Reject malformed output before it becomes a customer-visible dataset record. */
+export function validateOutput<T>(output: T): T {
+  OutputEnvelopeSchema.parse(output);
+  return output;
+}
+
 export interface Phase6Output extends Omit<Phase2Output, 'metadata'> {
   eightKAnalysis: EightKAnalysisOutput;
   metadata: {
@@ -177,3 +199,4 @@ export interface Phase6Output extends Omit<Phase2Output, 'metadata'> {
     phase: 'PHASE_6_8K_EVENT_ANALYSIS';
   };
 }
+import { z } from 'zod';

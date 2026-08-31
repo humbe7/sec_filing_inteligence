@@ -186,6 +186,33 @@ describe('CompanyFactsClient', () => {
     expect(best?.accn).toBe('0001000000-23-000001');
   });
 
+  it('selects only a fact compatible with the filing report date and period type', () => {
+    const facts: XBRLFact[] = [
+      {
+        ...mockFacts['us-gaap']['us-gaap:Revenues'][0],
+        accn: '0001000000-24-000001',
+        end: '2024-01-31',
+        start: '',
+        val: 10,
+      },
+      {
+        ...mockFacts['us-gaap']['us-gaap:Revenues'][0],
+        accn: '0001000000-24-000001',
+        end: '2024-03-31',
+        start: '',
+        val: 20,
+      },
+    ];
+
+    const best = client.findBestFact(facts, '10-Q', undefined, undefined, {
+      accessionNumber: '0001000000-24-000001',
+      reportDate: '2024-03-31',
+      periodType: 'instant',
+    });
+
+    expect(best?.val).toBe(20);
+  });
+
   it('should filter facts by fiscal period', () => {
     const facts: XBRLFact[] = [
       {

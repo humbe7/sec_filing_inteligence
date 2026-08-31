@@ -300,9 +300,9 @@ The materiality label reflects the standard SEC item category and is not an inve
 
 ### Pay-Per-Event Billing (Phase 7)
 
-Phase 7 provides opt-in Apify pay-per-event billing for each completed result. The actor saves the result first, then charges the custom `filing-analysis` event. Billing is disabled by default and is enabled only when `ENABLE_PPE_CHARGING=true`.
+Phase 7 provides opt-in Apify pay-per-event billing for each completed result. The actor saves the result first, then charges `basic-analysis`, `filing-comparison`, or `full-intelligence` according to the completed output. Billing is disabled by default and is enabled only when `ENABLE_PPE_CHARGING=true`.
 
-Before enabling billing in production, configure the matching `filing-analysis` event and its price in Apify Console. The existing pricing estimate suggests a starting point of `$0.15` per completed filing analysis, but it should be validated against actual LLM and platform costs before publication. A charge failure is logged without deleting a saved result.
+Before enabling billing in production, configure all three matching events and their prices in Apify Console. The existing pricing estimate suggests a starting point of `$0.15` per full-intelligence analysis, but it should be validated against actual LLM and platform costs before publication. A charge failure is logged without deleting a saved result.
 
 For a local PPE integration test, run the built actor with both `ACTOR_TEST_PAY_PER_EVENT=true` and `ENABLE_PPE_CHARGING=true`. Apify writes simulated charge records to the local `charging-log` dataset; no real platform charge occurs.
 

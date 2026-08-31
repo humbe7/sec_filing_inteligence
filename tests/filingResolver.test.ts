@@ -189,6 +189,32 @@ describe('FilingResolver', () => {
     expect(previousFiling?.accessionNumber).toBe('0001045810-23-000080');
   });
 
+  it('does not compare filings when the current report date is unavailable', async () => {
+    mockSecClient.getSubmissions.mockResolvedValue(mockSubmission);
+    const currentFiling = await resolver.findLatestFiling('0000001045810', '10-Q');
+
+    const previousFiling = await resolver.findComparablePreviousFiling(
+      '0000001045810',
+      { ...currentFiling, reportDate: '' },
+    );
+
+    expect(previousFiling).toBeNull();
+  });
+
+  it('does not fall back to an incompatible prior quarter', async () => {
+    const noYoYMatch: SecSubmission = {
+      ...mockSubmission,
+      filings: {
+        recent: mockSubmission.filings.recent.filter(f => f.accession_number !== '0001045810-23-000080'),
+        files: [],
+      },
+    };
+    mockSecClient.getSubmissions.mockResolvedValue(noYoYMatch);
+
+    const current = await resolver.findLatestFiling('0000001045810', '10-Q');
+    await expect(resolver.findComparablePreviousFiling(current)).resolves.toBeNull();
+  });
+
   it('should return null for previous 8-K filing', async () => {
     const filing = {
       cik: '0000001045810',

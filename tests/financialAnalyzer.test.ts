@@ -5,7 +5,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { FinancialAnalyzer } from '../src/xbrl/financialAnalyzer.js';
 import { CompanyFactsClient } from '../src/xbrl/companyFactsClient.js';
-import { FinancialMetric, FinancialValue } from '../src/xbrl/xbrlTypes.js';
+import { FinancialMetric, FinancialValue, PeriodType } from '../src/xbrl/xbrlTypes.js';
 import { SecClient } from '../src/sec/secClient.js';
 
 vi.mock('../src/sec/secClient.js');
@@ -18,6 +18,14 @@ describe('FinancialAnalyzer', () => {
     const mockSecClient = new SecClient() as any;
     mockFactsClient = new CompanyFactsClient(mockSecClient);
     analyzer = new FinancialAnalyzer(mockFactsClient);
+  });
+
+  it('skips extraction when the filing report date is unavailable', async () => {
+    const getCompanyFacts = vi.spyOn(mockFactsClient, 'getCompanyFacts');
+    const result = await analyzer.extractMetrics('0001000000', '10-Q', [], '0001000000-24-000001');
+
+    expect(result.metrics.size).toBe(0);
+    expect(getCompanyFacts).not.toHaveBeenCalled();
   });
 
   it('should calculate financial changes', () => {
@@ -121,6 +129,20 @@ describe('FinancialAnalyzer', () => {
 
     expect(change).not.toBeNull();
     expect(change!.percentChange).toBe(0);
+  });
+
+  it('rejects financial changes with incompatible duration periods', () => {
+    const current: FinancialValue = {
+      metric: FinancialMetric.REVENUE, value: 100, unit: 'USD', source: 'XBRL', confidence: 0.95,
+      periodEnd: '2024-06-30', fiscalYear: 2024, fiscalPeriod: 'Q2', filingDate: '2024-08-01',
+      accessionNumber: '0001000000-24-000001', periodType: PeriodType.DURATION, durationDays: 91,
+    };
+    const previous: FinancialValue = {
+      ...current, value: 80, periodEnd: '2023-06-30', fiscalYear: 2023,
+      accessionNumber: '0001000000-23-000001', durationDays: 182,
+    };
+
+    expect(analyzer.calculateFinancialChanges(current, previous, 'YOY')).toBeNull();
   });
 
   it('should calculate margins', () => {

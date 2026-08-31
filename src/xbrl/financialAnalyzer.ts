@@ -19,6 +19,14 @@ export interface MetricsForPeriod {
   metrics: Map<FinancialMetric, FinancialValue>;
 }
 
+type MetricPeriodType = 'instant' | 'duration';
+
+interface MetricSelection {
+  periodType: MetricPeriodType;
+  minDurationDays?: number;
+  maxDurationDays?: number;
+}
+
 export class FinancialAnalyzer {
   private factsClient: CompanyFactsClient;
   private normalizer: MetricNormalizer;
@@ -38,7 +46,17 @@ export class FinancialAnalyzer {
     form: string,
     requestedMetrics: FinancialMetric[] = [],
     accessionNumber?: string,
+    reportDate?: string,
   ): Promise<MetricsForPeriod> {
+    if (!reportDate) {
+      this.logger.warn('Skipping financial metric extraction because the filing report date is unavailable', {
+        cik,
+        form,
+        accessionNumber,
+      });
+      return { period: form, metrics: new Map() };
+    }
+
     const facts = await this.factsClient.getCompanyFacts(cik);
 
     // Default to common metrics if none specified
@@ -60,7 +78,7 @@ export class FinancialAnalyzer {
 
     for (const metric of metricsToExtract) {
       try {
-        const value = this.extractMetric(metric, facts, form, accessionNumber);
+        const value = this.extractMetric(metric, facts, form, accessionNumber, reportDate);
         if (value) {
           metrics.set(metric, value);
         }
@@ -83,6 +101,7 @@ export class FinancialAnalyzer {
     facts: CompanyFacts,
     form: string,
     accessionNumber?: string,
+    reportDate?: string,
   ): FinancialValue | null {
     const concepts = this.normalizer.resolveConcepts(metric);
 
@@ -99,7 +118,12 @@ export class FinancialAnalyzer {
         continue;
       }
 
-      const best = this.factsClient.findBestFact(conceptFacts, form, undefined, accessionNumber);
+      const selection = this.selectionFor(metric, form);
+      const best = this.factsClient.findBestFact(conceptFacts, form, undefined, accessionNumber, {
+        accessionNumber,
+        reportDate,
+        ...selection,
+      });
       if (best) {
         const value = this.normalizer.normalizeToValue(metric, best, concept, form);
         this.logger.debug(`Extracted metric`, {
@@ -130,6 +154,37 @@ export class FinancialAnalyzer {
         previous: previous.metric,
       });
       return null;
+    }
+
+    if (current.unit !== previous.unit) {
+      this.logger.warn('Attempting to compare incompatible units', {
+        metric: current.metric,
+        currentUnit: current.unit,
+        previousUnit: previous.unit,
+      });
+      return null;
+    }
+
+    if (current.periodType && previous.periodType && current.periodType !== previous.periodType) {
+      this.logger.warn('Attempting to compare incompatible period types', {
+        metric: current.metric,
+        currentPeriodType: current.periodType,
+        previousPeriodType: previous.periodType,
+      });
+      return null;
+    }
+
+    if (current.durationDays && previous.durationDays) {
+      const durationDifference = Math.abs(current.durationDays - previous.durationDays)
+        / Math.max(current.durationDays, previous.durationDays);
+      if (durationDifference > 0.05) {
+        this.logger.warn('Attempting to compare incompatible durations', {
+          metric: current.metric,
+          currentDurationDays: current.durationDays,
+          previousDurationDays: previous.durationDays,
+        });
+        return null;
+      }
     }
 
     // Can't compare if either value is zero for percentage calculation
@@ -218,6 +273,30 @@ export class FinancialAnalyzer {
         if (percentChange > 0.07) return 'medium';
         return 'low';
     }
+  }
+
+  private selectionFor(metric: FinancialMetric, form: string): MetricSelection {
+    const instantMetrics = new Set<FinancialMetric>([
+      FinancialMetric.CASH_AND_EQUIVALENTS,
+      FinancialMetric.SHORT_TERM_INVESTMENTS,
+      FinancialMetric.TOTAL_CASH,
+      FinancialMetric.CURRENT_ASSETS,
+      FinancialMetric.TOTAL_ASSETS,
+      FinancialMetric.CURRENT_LIABILITIES,
+      FinancialMetric.TOTAL_LIABILITIES,
+      FinancialMetric.STOCKHOLDERS_EQUITY,
+      FinancialMetric.LONG_TERM_DEBT,
+      FinancialMetric.SHORT_TERM_DEBT,
+      FinancialMetric.TOTAL_DEBT,
+      FinancialMetric.SHARES_OUTSTANDING,
+    ]);
+    if (instantMetrics.has(metric)) {
+      return { periodType: 'instant' };
+    }
+
+    return form === '10-K'
+      ? { periodType: 'duration', minDurationDays: 300, maxDurationDays: 380 }
+      : { periodType: 'duration', minDurationDays: 60, maxDurationDays: 120 };
   }
 
   /**

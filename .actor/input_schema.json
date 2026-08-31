@@ -28,7 +28,7 @@
     },
     "includeAIAnalysis": {
       "title": "Include AI Analysis",
-      "description": "Include AI-powered filing intelligence. Requires OPENAI_API_KEY.",
+      "description": "Include AI-powered filing intelligence. Requires OPENAI_API_KEY or ANTHROPIC_API_KEY.",
       "type": "boolean",
       "editor": "checkbox",
       "default": false
@@ -72,7 +72,7 @@
           "type": "boolean",
           "editor": "checkbox",
           "default": false,
-          "description": "Analyze liquidity changes (requires AI)"
+          "description": "Analyze verified liquidity changes from comparable XBRL metrics"
         },
         "legal": {
           "title": "Legal Developments",

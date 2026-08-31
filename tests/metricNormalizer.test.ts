@@ -89,6 +89,23 @@ describe('MetricNormalizer', () => {
     expect(value.value).toBe(-5_000_000_000);
   });
 
+  it('should preserve per-share units', () => {
+    const fact: XBRLFact = {
+      accn: '0001000000-24-000001', fy: 2024, fp: 'Q1', form: '10-Q', filed: '2024-05-15',
+      start: '2024-01-01', end: '2024-03-31', val: 1.25, accn_fp: '0001000000-24-000001_q1',
+      unit: 'USD/shares', negating: 0,
+    };
+
+    const value = normalizer.normalizeToValue(
+      FinancialMetric.EARNINGS_PER_SHARE_DILUTED,
+      fact,
+      'us-gaap:EarningsPerShareDiluted',
+      '10-Q',
+    );
+
+    expect(value.unit).toBe('USD/share');
+  });
+
   it('should calculate derived metrics', () => {
     const margin = normalizer.calculateDerivedMetric(
       FinancialMetric.GROSS_MARGIN,
