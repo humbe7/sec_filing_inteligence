@@ -215,6 +215,28 @@ describe('FilingResolver', () => {
     await expect(resolver.findComparablePreviousFiling(current)).resolves.toBeNull();
   });
 
+  it('loads older SEC submission batches when recent history lacks the comparable filing', async () => {
+    const recentOnly: SecSubmission = {
+      ...mockSubmission,
+      filings: {
+        recent: mockSubmission.filings.recent.filter(f => f.accession_number !== '0001045810-23-000080'),
+        files: [{ name: 'CIK0001045810-submissions-001.json', filingCount: 1 }],
+      },
+    };
+    mockSecClient.getSubmissions.mockResolvedValue(recentOnly);
+    mockSecClient.getSubmissionHistoryFile.mockResolvedValue({
+      accessionNumber: ['0001045810-23-000080'],
+      filingDate: ['2023-08-18'], reportDate: ['2023-07-31'], form: ['10-Q'],
+      primaryDocument: ['nvda-20230731.htm'],
+    });
+
+    const current = await resolver.findLatestFiling('0000001045810', '10-Q');
+    const previous = await resolver.findComparablePreviousFiling(current);
+
+    expect(previous?.accessionNumber).toBe('0001045810-23-000080');
+    expect(mockSecClient.getSubmissionHistoryFile).toHaveBeenCalledWith('CIK0001045810-submissions-001.json');
+  });
+
   it('should return null for previous 8-K filing', async () => {
     const filing = {
       cik: '0000001045810',

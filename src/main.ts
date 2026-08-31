@@ -412,16 +412,32 @@ async function main(): Promise<void> {
           : 4;
         const taskFactories: Array<() => Promise<void>> = [];
         if (includeRisk) {
-          taskFactories.push(async () => { aiAnalysis.riskFactors = await analyzeRisks(client, context); });
+          if (context.current.risk_factors) {
+            taskFactories.push(async () => { aiAnalysis.riskFactors = await analyzeRisks(client, context); });
+          } else {
+            runLogger.warn('Risk analysis skipped because the current filing has no risk-factors section');
+          }
         }
         if (includeTone) {
-          taskFactories.push(async () => { aiAnalysis.managementTone = await analyzeTone(client, context); });
+          if (context.current.management_discussion) {
+            taskFactories.push(async () => { aiAnalysis.managementTone = await analyzeTone(client, context); });
+          } else {
+            runLogger.warn('Management-tone analysis skipped because the current filing has no MD&A section');
+          }
         }
         if (includeGuidance) {
-          taskFactories.push(async () => { aiAnalysis.guidance = await analyzeGuidance(client, context); });
+          if (context.current.management_discussion) {
+            taskFactories.push(async () => { aiAnalysis.guidance = await analyzeGuidance(client, context); });
+          } else {
+            runLogger.warn('Guidance analysis skipped because the current filing has no MD&A section');
+          }
         }
         if (includeLegal) {
-          taskFactories.push(async () => { aiAnalysis.legal = await analyzeLegal(client, context); });
+          if (context.current.legal_proceedings) {
+            taskFactories.push(async () => { aiAnalysis.legal = await analyzeLegal(client, context); });
+          } else {
+            runLogger.warn('Legal analysis skipped because the current filing has no legal-proceedings section');
+          }
         }
 
         const results = await Promise.allSettled(taskFactories.slice(0, maxAiCalls).map(task => task()));

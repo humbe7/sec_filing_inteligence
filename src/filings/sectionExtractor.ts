@@ -44,14 +44,23 @@ function countWords(text: string): number {
   return text.split(/\s+/).filter(Boolean).length;
 }
 
+function matchesHeading(line: string, aliases: string[]): boolean {
+  const heading = normalizeHeading(line);
+  return aliases.some(alias => heading === alias || heading.startsWith(`${alias} `));
+}
+
 export function extractSections(parsed: ParsedFiling): ExtractedSection[] {
   const lines = normalizeText(parsed.text).split('\n');
   const definitions = SECTION_DEFINITIONS[parsed.filingType] || [];
 
   const matches = definitions
     .map(definition => {
-      const startLine = lines.findIndex(line =>
-        definition.aliases.includes(normalizeHeading(line)),
+      // SEC filings commonly repeat headings in the table of contents. The
+      // final heading is the substantive section, while prefix matching keeps
+      // standard item headings with descriptive suffixes discoverable.
+      const startLine = lines.reduce(
+        (lastMatch, line, index) => matchesHeading(line, definition.aliases) ? index : lastMatch,
+        -1,
       );
 
       return startLine >= 0 ? { definition, startLine } : null;

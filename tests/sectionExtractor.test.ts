@@ -34,4 +34,26 @@ Controls remained effective.
     ]);
     expect(sections[1].text).toContain('pricing, demand, and margin improvement');
   });
+
+  it('uses the substantive heading instead of a table-of-contents duplicate', () => {
+    const filing: ParsedFiling = {
+      accessionNumber: '0000000000-24-000001', filingType: '10-Q', filingDate: '2024-05-01', title: 'Quarterly Report',
+      text: `
+Item 2 Management's Discussion and Analysis
+Item 1A Risk Factors
+
+Item 2 Management's Discussion and Analysis of Financial Condition and Results of Operations
+Management expects demand to remain strong.
+
+Item 1A Risk Factors
+Competition intensified in core markets.
+      `.trim(),
+    };
+
+    const sections = extractSections(filing);
+    const managementDiscussion = sections.find(section => section.key === 'management_discussion');
+
+    expect(managementDiscussion?.text).toContain('Management expects demand to remain strong.');
+    expect(managementDiscussion?.text).not.toContain('Item 1A Risk Factors');
+  });
 });

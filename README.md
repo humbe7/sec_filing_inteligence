@@ -37,7 +37,7 @@ This is NOT a simple filing downloader. It transforms regulatory documents into 
 
 ### Phase 2 ✅
 - [x] XBRL financial metric extraction
-- [x] QoQ and YoY change calculation
+- [x] Period-compatible YoY change calculation
 - [x] Financial anomaly detection
 
 ### Phase 3 ✅
@@ -152,8 +152,6 @@ SEC_MAX_REQUESTS_PER_SECOND=8
 # Logging
 LOG_LEVEL=INFO
 
-# Cache
-ENABLE_CACHE=true
 ```
 
 ---

@@ -38,7 +38,7 @@ export class PreviousFilingNotFoundError extends SecFilingError {
 }
 
 export class SecRateLimitError extends SecFilingError {
-  constructor(retryAfterSeconds?: number) {
+  constructor(public readonly retryAfterSeconds?: number) {
     const message = retryAfterSeconds
       ? `SEC rate limit exceeded. Retry after ${retryAfterSeconds} seconds.`
       : 'SEC rate limit exceeded.';

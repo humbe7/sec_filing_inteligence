@@ -29,7 +29,7 @@ export class FilingResolver {
     const submission = await this.getSubmission(cik);
 
     // Get all filings of the requested type
-    const filings = this.getAllFilings(submission);
+    const filings = await this.getAllFilings(submission);
     const matching = filings.filter(f => f.form === form);
 
     if (matching.length === 0) {
@@ -64,7 +64,7 @@ export class FilingResolver {
     });
 
     const submission = await this.getSubmission(cik);
-    const filings = this.getAllFilings(submission);
+    const filings = await this.getAllFilings(submission);
     const matching = filings.filter(f => f.form === form);
 
     if (matching.length < 2) {
@@ -181,7 +181,7 @@ export class FilingResolver {
   /**
    * Get all filings from submission (recent + older batches)
    */
-  private getAllFilings(submission: SecSubmission): SecFiling[] {
+  private async getAllFilings(submission: SecSubmission): Promise<SecFiling[]> {
     const recentFilings = submission.filings?.recent;
     if (!recentFilings) {
       return [];
@@ -192,10 +192,36 @@ export class FilingResolver {
       ? recentFilings
       : this.normalizeColumnarFilings(recentFilings);
 
-    // In a full implementation, we'd also fetch older filings from the files list
-    // For MVP, recent should be sufficient for finding current and previous
+    // Older history is supplied in separate SEC batches. Fetch sequentially to
+    // preserve the same rate-limited request behavior as the primary endpoint.
+    const olderBatches: SecFiling[] = [];
+    for (const file of submission.filings.files || []) {
+      try {
+        const batch = await this.secClient.getSubmissionHistoryFile(file.name);
+        const batchFilings = this.normalizeHistoryBatch(batch);
+        olderBatches.push(...batchFilings);
+      } catch (error) {
+        this.logger.warn('Failed to fetch older SEC filing-history batch', { name: file.name, error });
+      }
+    }
 
-    return filings;
+    return [...filings, ...olderBatches].sort(
+      (a, b) => new Date(b.filingDate).getTime() - new Date(a.filingDate).getTime(),
+    );
+  }
+
+  private normalizeHistoryBatch(batch: unknown): SecFiling[] {
+    if (Array.isArray(batch)) return batch as SecFiling[];
+    if (!batch || typeof batch !== 'object') return [];
+    const record = batch as Record<string, unknown>;
+    if (Array.isArray(record.recent)) return record.recent as SecFiling[];
+    if (record.recent && typeof record.recent === 'object') {
+      return this.normalizeColumnarFilings(record.recent as SecFilingColumns);
+    }
+    if (Array.isArray(record.accessionNumber)) {
+      return this.normalizeColumnarFilings(record as unknown as SecFilingColumns);
+    }
+    return [];
   }
 
   /** Convert the SEC submissions endpoint's columnar response into filing records. */

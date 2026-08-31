@@ -10,7 +10,7 @@ export const RiskAnalysisSchema = z.object({
   newRisks: z.array(z.string().min(1).max(500)).max(10),
   removedRisks: z.array(z.string().min(1).max(500)).max(10),
   summary: z.string().min(1).max(1500),
-  evidence: z.array(EvidenceSchema).max(10),
+  evidence: z.array(EvidenceSchema).min(1).max(10),
 });
 
 export const ToneAnalysisSchema = z.object({
@@ -18,7 +18,7 @@ export const ToneAnalysisSchema = z.object({
   previousTone: z.enum(['positive', 'neutral', 'cautious', 'negative', 'mixed']).optional(),
   change: z.enum(['more_positive', 'more_cautious', 'more_negative', 'unchanged', 'unclear']),
   summary: z.string().min(1).max(1500),
-  evidence: z.array(EvidenceSchema).max(10),
+  evidence: z.array(EvidenceSchema).min(1).max(10),
 });
 
 export const GuidanceAnalysisSchema = z.object({
@@ -26,14 +26,14 @@ export const GuidanceAnalysisSchema = z.object({
   guidance: z.array(z.string().min(1).max(750)).max(10),
   changes: z.array(z.string().min(1).max(750)).max(10),
   summary: z.string().min(1).max(1500),
-  evidence: z.array(EvidenceSchema).max(10),
+  evidence: z.array(EvidenceSchema).min(1).max(10),
 });
 
 export const LegalAnalysisSchema = z.object({
   severity: z.enum(['high', 'medium', 'low', 'none', 'unclear']),
   developments: z.array(z.string().min(1).max(750)).max(10),
   summary: z.string().min(1).max(1500),
-  evidence: z.array(EvidenceSchema).max(10),
+  evidence: z.array(EvidenceSchema).min(1).max(10),
 });
 
 export type RiskAnalysis = z.infer<typeof RiskAnalysisSchema>;

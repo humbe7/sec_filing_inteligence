@@ -29,6 +29,18 @@ class UngroundedLlmClient implements LlmClient {
   }
 }
 
+class EmptyEvidenceLlmClient implements LlmClient {
+  async completeJson(): Promise<unknown> {
+    return {
+      overallRiskTrend: 'increased',
+      newRisks: ['Invented risk'],
+      removedRisks: [],
+      summary: 'Unsupported claim.',
+      evidence: [],
+    };
+  }
+}
+
 describe('analyzers', () => {
   it('builds a risk prompt from comparable filing sections and validates the result', async () => {
     const client = new StubLlmClient();
@@ -53,5 +65,14 @@ describe('analyzers', () => {
       },
       textualChanges: [],
     })).rejects.toThrow('AI evidence is not a verbatim quote');
+  });
+
+  it('rejects material AI conclusions without filing evidence', async () => {
+    await expect(analyzeRisks(new EmptyEvidenceLlmClient(), {
+      current: {
+        risk_factors: { title: 'Risk Factors', wordCount: 5, text: 'Tariffs may raise costs.' },
+      },
+      textualChanges: [],
+    })).rejects.toThrow('Invalid risk analysis response');
   });
 });

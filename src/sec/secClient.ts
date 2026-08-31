@@ -145,6 +145,14 @@ export class SecClient {
     );
   }
 
+  /** Fetch an older filing-history batch referenced by the submissions API. */
+  async getSubmissionHistoryFile(name: string): Promise<unknown> {
+    if (!/^CIK\d{10}-submissions-\d{3}\.json$/.test(name)) {
+      throw new Error('Invalid SEC submission history file name');
+    }
+    return this.request(`/submissions/${name}`, `Get submission history file ${name}`);
+  }
+
   /**
    * Get company facts (XBRL data)
    */

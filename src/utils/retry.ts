@@ -102,10 +102,14 @@ export async function retry<T>(
         throw lastError;
       }
 
-      const delayMs = calculateDelay(attempt, opts);
+      const retryAfterMs = error instanceof SecRateLimitError && Number.isFinite(error.retryAfterSeconds)
+        ? Math.max(0, (error.retryAfterSeconds as number) * 1000)
+        : 0;
+      const delayMs = Math.max(calculateDelay(attempt, opts), retryAfterMs);
       await sleep(delayMs);
     }
   }
 
   throw lastError || new Error('Retry failed without error');
 }
+import { SecRateLimitError } from '../actor/errors.js';
