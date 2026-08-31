@@ -9,6 +9,7 @@
       "type": "string",
       "editor": "textfield",
       "pattern": "^[A-Z]{1,5}$",
+      "prefill": "NVDA",
       "example": "NVDA"
     },
     "filingType": {
