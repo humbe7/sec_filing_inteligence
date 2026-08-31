@@ -7,6 +7,7 @@
       "title": "Ticker Symbol",
       "description": "Stock ticker symbol (e.g., NVDA, AAPL)",
       "type": "string",
+      "editor": "textfield",
       "pattern": "^[A-Z]{1,5}$",
       "example": "NVDA"
     },
@@ -14,6 +15,7 @@
       "title": "Filing Type",
       "description": "Type of SEC filing to analyze",
       "type": "string",
+      "editor": "select",
       "enum": ["10-Q", "10-K", "8-K"],
       "default": "10-Q"
     },
@@ -21,46 +23,61 @@
       "title": "Compare Previous Filing",
       "description": "Whether to find and compare with previous filing",
       "type": "boolean",
+      "editor": "checkbox",
       "default": true
     },
     "includeAIAnalysis": {
       "title": "Include AI Analysis",
       "description": "Include AI-powered filing intelligence. Requires OPENAI_API_KEY.",
       "type": "boolean",
+      "editor": "checkbox",
       "default": false
     },
     "analysis": {
       "title": "Analysis Options",
       "description": "Specific analysis components to include",
       "type": "object",
+      "editor": "schemaBased",
       "properties": {
         "financials": {
+          "title": "Financial Metrics",
           "type": "boolean",
+          "editor": "checkbox",
           "default": true,
           "description": "Extract and compare financial metrics"
         },
         "riskFactors": {
+          "title": "Risk Factors",
           "type": "boolean",
+          "editor": "checkbox",
           "default": false,
           "description": "Analyze risk factor changes with AI"
         },
         "managementTone": {
+          "title": "Management Tone",
           "type": "boolean",
+          "editor": "checkbox",
           "default": false,
           "description": "Analyze management tone with AI"
         },
         "guidance": {
+          "title": "Guidance",
           "type": "boolean",
+          "editor": "checkbox",
           "default": false,
           "description": "Detect guidance and outlook changes with AI"
         },
         "liquidity": {
+          "title": "Liquidity",
           "type": "boolean",
+          "editor": "checkbox",
           "default": false,
           "description": "Analyze liquidity changes (requires AI)"
         },
         "legal": {
+          "title": "Legal Developments",
           "type": "boolean",
+          "editor": "checkbox",
           "default": false,
           "description": "Analyze legal and regulatory developments with AI"
         }
