@@ -1,0 +1,91 @@
+{
+  "actorSpecification": 1,
+  "title": "SEC Filing Intelligence Results",
+  "description": "One structured SEC filing analysis per Actor run.",
+  "fields": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "required": ["company", "filing", "metadata"],
+    "properties": {
+      "company": {
+        "type": "object",
+        "description": "SEC registrant resolved from the requested ticker.",
+        "required": ["ticker", "cik", "name"],
+        "properties": {
+          "ticker": { "type": "string", "title": "Ticker", "example": "NVDA" },
+          "cik": { "type": "string", "title": "CIK", "example": "0001045810" },
+          "name": { "type": "string", "title": "Company", "example": "NVIDIA CORP" },
+          "sic": { "type": "string", "title": "SIC" },
+          "category": { "type": "string", "title": "SEC filer category" }
+        },
+        "additionalProperties": false
+      },
+      "filing": {
+        "type": "object",
+        "description": "Current filing and, when available, a period-compatible prior filing.",
+        "required": ["current"],
+        "properties": {
+          "current": { "$ref": "#/definitions/filingMetadata" },
+          "previous": {
+            "anyOf": [
+              { "$ref": "#/definitions/filingMetadata" },
+              { "type": "null" }
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "financialChanges": {
+        "type": "array",
+        "description": "Validated, period-compatible XBRL metric comparisons.",
+        "items": { "type": "object" }
+      },
+      "aiAnalysis": {
+        "type": "object",
+        "description": "Optional AI analyses with required verbatim filing evidence.",
+        "additionalProperties": true
+      },
+      "scoring": {
+        "type": "object",
+        "description": "Explainable materiality, direction, and confidence scores.",
+        "additionalProperties": true
+      },
+      "metadata": {
+        "type": "object",
+        "required": ["generatedAt", "analysisVersion", "phase"],
+        "properties": {
+          "generatedAt": { "type": "string", "format": "date-time", "title": "Generated at" },
+          "analysisVersion": { "type": "string", "title": "Analysis version" },
+          "phase": { "type": "string", "title": "Completed analysis phase" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "definitions": {
+      "filingMetadata": {
+        "type": "object",
+        "required": ["cik", "accessionNumber", "filingType", "filingDate", "primaryDocument", "filingUrl", "isAmendment"],
+        "properties": {
+          "cik": { "type": "string" },
+          "accessionNumber": { "type": "string" },
+          "filingType": { "type": "string" },
+          "filingDate": { "type": "string", "format": "date" },
+          "reportDate": { "type": "string", "format": "date" },
+          "primaryDocument": { "type": "string" },
+          "filingUrl": { "type": "string", "format": "uri" },
+          "isAmendment": { "type": "boolean" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "additionalProperties": true
+  },
+  "views": {
+    "overview": {
+      "title": "Overview",
+      "description": "One complete filing analysis record per run.",
+      "transformation": {},
+      "display": { "component": "table" }
+    }
+  }
+}
