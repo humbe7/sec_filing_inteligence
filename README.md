@@ -264,7 +264,7 @@ ENABLE_CACHE=true
 }
 ```
 
-AI analysis is opt-in. Set `includeAIAnalysis: true` and configure `OPENAI_API_KEY` for OpenAI-compatible providers or `ANTHROPIC_API_KEY` for Claude's native Messages API. Optional provider-specific base URL, model, and timeout environment variables are documented in `.env.example`. When both keys are set, Anthropic takes precedence. When no core AI option is selected, the actor runs risk, tone, guidance, and legal analysis. AI responses are schema-validated and include filing evidence; they are informational and not investment advice.
+AI analysis is opt-in. Set `includeAIAnalysis: true` and configure `OPENAI_API_KEY` for OpenAI-compatible providers or `ANTHROPIC_API_KEY` for Claude's native Messages API. Set `ANTHROPIC_WORKSPACE_ID` when using an identity-linked Anthropic key. Optional provider-specific base URL, model, and timeout environment variables are documented in `.env.example`. When both keys are set, Anthropic takes precedence. When no core AI option is selected, the actor runs risk, tone, guidance, and legal analysis. AI responses are schema-validated and include filing evidence; they are informational and not investment advice.
 
 ### Explainable Scoring (Phase 5)
 

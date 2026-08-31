@@ -358,6 +358,7 @@ async function main(): Promise<void> {
         const client: LlmClient = process.env.ANTHROPIC_API_KEY
           ? new AnthropicMessagesLlmClient({
               apiKey: process.env.ANTHROPIC_API_KEY,
+              workspaceId: process.env.ANTHROPIC_WORKSPACE_ID,
               baseUrl: process.env.ANTHROPIC_BASE_URL,
               model: process.env.ANTHROPIC_MODEL,
               timeoutMs: process.env.ANTHROPIC_TIMEOUT_MS

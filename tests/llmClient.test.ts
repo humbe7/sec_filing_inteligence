@@ -12,7 +12,11 @@ describe('AnthropicMessagesLlmClient', () => {
       json: async () => ({ content: [{ type: 'text', text: '{"result":"ok"}' }] }),
     });
     vi.stubGlobal('fetch', fetchMock);
-    const client = new AnthropicMessagesLlmClient({ apiKey: 'test-key', model: 'claude-test' });
+    const client = new AnthropicMessagesLlmClient({
+      apiKey: 'test-key',
+      workspaceId: 'workspace-test',
+      model: 'claude-test',
+    });
 
     await expect(client.completeJson('Analyze this filing.')).resolves.toEqual({ result: 'ok' });
 
@@ -20,6 +24,7 @@ describe('AnthropicMessagesLlmClient', () => {
       headers: expect.objectContaining({
         'x-api-key': 'test-key',
         'anthropic-version': '2023-06-01',
+        'anthropic-workspace-id': 'workspace-test',
       }),
     }));
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({

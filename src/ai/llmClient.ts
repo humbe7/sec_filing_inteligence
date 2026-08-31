@@ -47,6 +47,7 @@ export interface OpenAiCompatibleLlmClientOptions {
 
 export interface AnthropicMessagesLlmClientOptions {
   apiKey: string;
+  workspaceId?: string;
   baseUrl?: string;
   model?: string;
   timeoutMs?: number;
@@ -154,6 +155,7 @@ export class AnthropicMessagesLlmClient implements LlmClient {
           'x-api-key': this.options.apiKey,
           'anthropic-version': '2023-06-01',
           'Content-Type': 'application/json',
+          ...(this.options.workspaceId ? { 'anthropic-workspace-id': this.options.workspaceId } : {}),
         },
         body: JSON.stringify({
           model: this.model,
