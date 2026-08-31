@@ -40,7 +40,7 @@ export class Logger {
       ...this.context,
     };
     if (data) {
-      log.data = data;
+      log.data = this.serializeError(data);
     }
     console.log(JSON.stringify(log));
   }
@@ -58,14 +58,17 @@ export class Logger {
   }
 
   error(message: string, error?: Error | unknown): void {
-    const errorData = error instanceof Error
+    this.formatLog(LogLevel.ERROR, message, error);
+  }
+
+  private serializeError(data: unknown): unknown {
+    return data instanceof Error
       ? {
-          errorName: error.name,
-          errorMessage: error.message,
-          errorStack: error.stack,
+          errorName: data.name,
+          errorMessage: data.message,
+          errorStack: data.stack,
         }
-      : error;
-    this.formatLog(LogLevel.ERROR, message, errorData);
+      : data;
   }
 }
 
