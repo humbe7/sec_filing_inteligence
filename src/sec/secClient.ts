@@ -14,9 +14,11 @@ export interface SecClientOptions extends RateLimiterOptions {
   contactEmail?: string;
   baseURL?: string;
   timeout?: number;
+  websiteBaseURL?: string;
 }
 
 const SEC_BASE_URL = 'https://data.sec.gov';
+const SEC_WEBSITE_BASE_URL = 'https://www.sec.gov';
 const MAX_FILING_DOCUMENT_BYTES = 20 * 1024 * 1024;
 
 export function buildFilingDocumentPath(accessionNumber: string, primaryDocument: string): string {
@@ -36,6 +38,7 @@ export class SecClient {
   private client: AxiosInstance;
   private rateLimiter: RateLimiter;
   private logger: Logger;
+  private websiteBaseURL: string;
 
   constructor(options: SecClientOptions = {}) {
     const userAgent = options.userAgent || 'SECFilingIntelligence/1.0';
@@ -50,6 +53,7 @@ export class SecClient {
         'Accept': 'application/json',
       },
     });
+    this.websiteBaseURL = (options.websiteBaseURL || SEC_WEBSITE_BASE_URL).replace(/\/$/, '');
 
     this.rateLimiter = new RateLimiter({
       requestsPerSecond: options.requestsPerSecond,
@@ -125,7 +129,7 @@ export class SecClient {
    */
   async getCompanyTickers(): Promise<Record<string, unknown>> {
     return this.request(
-      '/files/documents/company_tickers.json',
+      `${this.websiteBaseURL}/files/company_tickers.json`,
       'Get company ticker mappings',
     );
   }
@@ -160,7 +164,7 @@ export class SecClient {
     accessionNumber: string,
     primaryDocument: string,
   ): Promise<string> {
-    const path = buildFilingDocumentPath(accessionNumber, primaryDocument);
+    const path = `${this.websiteBaseURL}${buildFilingDocumentPath(accessionNumber, primaryDocument)}`;
 
     // Filing HTML can be large; retry transient failures while bounding memory use.
     return retry(

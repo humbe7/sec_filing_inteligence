@@ -42,6 +42,7 @@ const logger = createLogger({ phase: 'MAIN' });
  * Main actor function
  */
 async function main(): Promise<void> {
+  await Actor.init();
   logger.info('SEC Filing Intelligence Actor starting');
 
   // Get and validate input
@@ -501,6 +502,7 @@ async function main(): Promise<void> {
       currentAccession: currentFiling.accessionNumber,
       previousAccession: previousFiling?.accessionNumber,
     });
+    await Actor.exit();
   } catch (error) {
     if (error instanceof SecFilingError) {
       logger.error(`SEC Filing Error: ${error.code}`, error);
