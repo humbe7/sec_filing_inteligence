@@ -121,13 +121,23 @@ async function main(): Promise<void> {
 
         // Extract current and previous metrics
         runLogger.info('Extracting current period metrics');
-        const currentMetrics = await financialAnalyzer.extractMetrics(company.cik, currentFiling.filingType);
+        const currentMetrics = await financialAnalyzer.extractMetrics(
+          company.cik,
+          currentFiling.filingType,
+          [],
+          currentFiling.accessionNumber,
+        );
         runLogger.info('Current metrics extracted', { metricCount: currentMetrics.metrics.size });
 
         let previousMetrics = null;
         if (previousFiling) {
           runLogger.info('Extracting previous period metrics');
-          previousMetrics = await financialAnalyzer.extractMetrics(company.cik, previousFiling.filingType);
+          previousMetrics = await financialAnalyzer.extractMetrics(
+            company.cik,
+            previousFiling.filingType,
+            [],
+            previousFiling.accessionNumber,
+          );
           runLogger.info('Previous metrics extracted', { metricCount: previousMetrics.metrics.size });
         }
 

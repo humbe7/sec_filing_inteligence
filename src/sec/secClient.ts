@@ -31,7 +31,7 @@ export function buildFilingDocumentPath(accessionNumber: string, primaryDocument
 
   const archiveCik = accessionNumber.slice(0, 10).replace(/^0+/, '') || '0';
   const accessionDigits = accessionNumber.replace(/-/g, '');
-  return `/Archives/${archiveCik}/${accessionDigits}/${encodeURIComponent(primaryDocument)}`;
+  return `/Archives/edgar/data/${archiveCik}/${accessionDigits}/${encodeURIComponent(primaryDocument)}`;
 }
 
 export class SecClient {

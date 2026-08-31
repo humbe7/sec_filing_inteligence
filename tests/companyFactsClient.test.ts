@@ -68,6 +68,29 @@ describe('CompanyFactsClient', () => {
     expect(mockSecClient.getCompanyFacts).toHaveBeenCalledWith('0001000000');
   });
 
+  it('should normalize the SEC companyfacts taxonomy and units response', async () => {
+    mockSecClient.getCompanyFacts.mockResolvedValue({
+      facts: {
+        'us-gaap': {
+          Revenues: {
+            units: {
+              USD: [{
+                accn: '0001000000-24-000001', fy: 2024, fp: 'Q1', form: '10-Q',
+                filed: '2024-05-15', start: '2024-01-01', end: '2024-03-31', val: 25_000_000_000,
+              }],
+            },
+          },
+        },
+      },
+    });
+
+    const facts = await client.getCompanyFacts('0001000000');
+    const revenues = client.getConceptFacts(facts, 'us-gaap:Revenues');
+
+    expect(revenues).toHaveLength(1);
+    expect(revenues[0]).toMatchObject({ unit: 'USD', val: 25_000_000_000 });
+  });
+
   it('should cache results', async () => {
     mockSecClient.getCompanyFacts.mockResolvedValue(mockFacts);
 
@@ -150,6 +173,17 @@ describe('CompanyFactsClient', () => {
     expect(best).not.toBeNull();
     expect(best?.val).toBe(25_000_000_000);
     expect(best?.filed).toBe('2024-05-15');
+  });
+
+  it('should find a fact for the requested accession number', () => {
+    const facts = [
+      { ...mockFacts['us-gaap']['us-gaap:Revenues'][0], accn: '0001000000-24-000001' },
+      { ...mockFacts['us-gaap']['us-gaap:Revenues'][0], accn: '0001000000-23-000001', filed: '2023-05-10' },
+    ];
+
+    const best = client.findBestFact(facts, '10-Q', undefined, '0001000000-23-000001');
+
+    expect(best?.accn).toBe('0001000000-23-000001');
   });
 
   it('should filter facts by fiscal period', () => {

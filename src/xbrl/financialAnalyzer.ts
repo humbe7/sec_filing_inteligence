@@ -37,6 +37,7 @@ export class FinancialAnalyzer {
     cik: string,
     form: string,
     requestedMetrics: FinancialMetric[] = [],
+    accessionNumber?: string,
   ): Promise<MetricsForPeriod> {
     const facts = await this.factsClient.getCompanyFacts(cik);
 
@@ -59,7 +60,7 @@ export class FinancialAnalyzer {
 
     for (const metric of metricsToExtract) {
       try {
-        const value = this.extractMetric(metric, facts, form);
+        const value = this.extractMetric(metric, facts, form, accessionNumber);
         if (value) {
           metrics.set(metric, value);
         }
@@ -77,7 +78,12 @@ export class FinancialAnalyzer {
   /**
    * Extract a single metric from company facts
    */
-  private extractMetric(metric: FinancialMetric, facts: CompanyFacts, form: string): FinancialValue | null {
+  private extractMetric(
+    metric: FinancialMetric,
+    facts: CompanyFacts,
+    form: string,
+    accessionNumber?: string,
+  ): FinancialValue | null {
     const concepts = this.normalizer.resolveConcepts(metric);
 
     if (concepts.length === 0) {
@@ -93,7 +99,7 @@ export class FinancialAnalyzer {
         continue;
       }
 
-      const best = this.factsClient.findBestFact(conceptFacts, form);
+      const best = this.factsClient.findBestFact(conceptFacts, form, undefined, accessionNumber);
       if (best) {
         const value = this.normalizer.normalizeToValue(metric, best, concept, form);
         this.logger.debug(`Extracted metric`, {

@@ -39,7 +39,8 @@ export class CompanyFactsClient {
     this.logger.info('Fetching company facts from SEC', { cik: normalizedCik });
 
     try {
-      const facts = (await this.secClient.getCompanyFacts(normalizedCik)) as CompanyFacts;
+      const response = await this.secClient.getCompanyFacts(normalizedCik);
+      const facts = this.normalizeCompanyFacts(response);
 
       // Validate structure
       if (!facts || typeof facts !== 'object') {
@@ -90,6 +91,7 @@ export class CompanyFactsClient {
     facts: XBRLFact[],
     form: string,
     fiscalPeriod?: string,
+    accessionNumber?: string,
   ): XBRLFact | null {
     if (facts.length === 0) {
       return null;
@@ -97,6 +99,10 @@ export class CompanyFactsClient {
 
     // Filter by form
     let filtered = facts.filter(f => f.form === form || f.form.startsWith(form));
+
+    if (accessionNumber) {
+      filtered = filtered.filter(f => f.accn === accessionNumber);
+    }
 
     // Filter by fiscal period if specified
     if (fiscalPeriod) {
@@ -159,5 +165,76 @@ export class CompanyFactsClient {
    */
   getCacheSize(): number {
     return this.cache.size;
+  }
+
+  /** Normalize the SEC's taxonomy-and-units response into the internal fact map. */
+  private normalizeCompanyFacts(response: unknown): CompanyFacts {
+    if (!response || typeof response !== 'object') {
+      return { 'us-gaap': {} };
+    }
+
+    const root = response as Record<string, unknown>;
+    const rawTaxonomies = root.facts;
+    if (!rawTaxonomies || typeof rawTaxonomies !== 'object') {
+      return response as CompanyFacts;
+    }
+
+    const normalized: CompanyFacts = { 'us-gaap': {} };
+    for (const [taxonomy, rawConcepts] of Object.entries(rawTaxonomies as Record<string, unknown>)) {
+      if (!rawConcepts || typeof rawConcepts !== 'object') continue;
+
+      const taxonomyFacts: Record<string, XBRLFact[]> = {};
+      for (const [conceptName, rawConcept] of Object.entries(rawConcepts as Record<string, unknown>)) {
+        if (!rawConcept || typeof rawConcept !== 'object') continue;
+        const units = (rawConcept as Record<string, unknown>).units;
+        if (!units || typeof units !== 'object') continue;
+
+        const facts: XBRLFact[] = [];
+        for (const [unit, rawFacts] of Object.entries(units as Record<string, unknown>)) {
+          if (!Array.isArray(rawFacts)) continue;
+          for (const rawFact of rawFacts) {
+            const fact = this.normalizeFact(rawFact, unit);
+            if (fact) facts.push(fact);
+          }
+        }
+
+        if (facts.length > 0) {
+          taxonomyFacts[`${taxonomy}:${conceptName}`] = facts;
+        }
+      }
+
+      if (taxonomy === 'us-gaap') {
+        normalized['us-gaap'] = taxonomyFacts;
+      } else if (taxonomy === 'ifrs-full') {
+        normalized['ifrs-full'] = taxonomyFacts;
+      } else if (taxonomy === 'dei') {
+        normalized.dei = taxonomyFacts;
+      }
+    }
+
+    return normalized;
+  }
+
+  private normalizeFact(rawFact: unknown, unit: string): XBRLFact | null {
+    if (!rawFact || typeof rawFact !== 'object') return null;
+    const fact = rawFact as Record<string, unknown>;
+    if (typeof fact.accn !== 'string' || typeof fact.form !== 'string' || typeof fact.filed !== 'string'
+      || typeof fact.end !== 'string' || typeof fact.val !== 'number') {
+      return null;
+    }
+
+    return {
+      accn: fact.accn,
+      fy: typeof fact.fy === 'number' ? fact.fy : 0,
+      fp: typeof fact.fp === 'string' ? fact.fp : '',
+      form: fact.form,
+      filed: fact.filed,
+      start: typeof fact.start === 'string' ? fact.start : '',
+      end: fact.end,
+      val: fact.val,
+      accn_fp: `${fact.accn}_${typeof fact.fp === 'string' ? fact.fp : ''}`,
+      unit,
+      negating: typeof fact.negating === 'number' ? fact.negating : 0,
+    };
   }
 }
