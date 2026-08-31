@@ -4,7 +4,7 @@
  */
 
 import { SecClient } from './secClient.js';
-import { SecSubmission, SecFiling } from './secTypes.js';
+import { SecSubmission, SecFiling, SecFilingColumns } from './secTypes.js';
 import { FilingNotFoundError, FilingParseError } from '../actor/errors.js';
 import { FilingMetadata } from '../actor/output.js';
 import { Logger } from '../utils/logger.js';
@@ -176,17 +176,40 @@ export class FilingResolver {
    * Get all filings from submission (recent + older batches)
    */
   private getAllFilings(submission: SecSubmission): SecFiling[] {
-    const filings: SecFiling[] = [];
-
-    // Add recent filings
-    if (submission.filings?.recent) {
-      filings.push(...submission.filings.recent);
+    const recentFilings = submission.filings?.recent;
+    if (!recentFilings) {
+      return [];
     }
+
+    // Unit fixtures and some cached data use objects; the live SEC API is columnar.
+    const filings = Array.isArray(recentFilings)
+      ? recentFilings
+      : this.normalizeColumnarFilings(recentFilings);
 
     // In a full implementation, we'd also fetch older filings from the files list
     // For MVP, recent should be sufficient for finding current and previous
 
     return filings;
+  }
+
+  /** Convert the SEC submissions endpoint's columnar response into filing records. */
+  private normalizeColumnarFilings(columns: SecFilingColumns): SecFiling[] {
+    return columns.accessionNumber.map((accession_number, index) => ({
+      accession_number,
+      filingDate: columns.filingDate?.[index] ?? '',
+      reportDate: columns.reportDate?.[index] ?? '',
+      acceptanceDateTime: columns.acceptanceDateTime?.[index] ?? '',
+      act: columns.act?.[index] ?? '',
+      form: columns.form?.[index] ?? '',
+      fileNumber: columns.fileNumber?.[index] ?? '',
+      filmNumber: columns.filmNumber?.[index] ?? '',
+      items: columns.items?.[index] ?? '',
+      size: columns.size?.[index] ?? 0,
+      isXBRL: columns.isXBRL?.[index] ?? 0,
+      isInlineXBRL: columns.isInlineXBRL?.[index] ?? 0,
+      primaryDocument: columns.primaryDocument?.[index] ?? '',
+      primaryDocumentDescription: columns.primaryDocDescription?.[index] ?? '',
+    }));
   }
 
   /**

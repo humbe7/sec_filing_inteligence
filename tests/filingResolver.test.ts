@@ -114,6 +114,37 @@ describe('FilingResolver', () => {
     expect(filing.isAmendment).toBe(false);
   });
 
+  it('should normalize the SEC columnar recent-filings response', async () => {
+    const columnarSubmission: SecSubmission = {
+      ...mockSubmission,
+      filings: {
+        recent: {
+          accessionNumber: ['0001045810-24-000100', '0001045810-23-000080'],
+          filingDate: ['2024-08-26', '2023-08-18'],
+          reportDate: ['2024-07-31', '2023-07-31'],
+          acceptanceDateTime: ['2024-08-26T15:30:00.000Z', '2023-08-18T15:30:00.000Z'],
+          act: ['34', '34'],
+          form: ['10-Q', '10-Q'],
+          fileNumber: ['001-10882', '001-10882'],
+          filmNumber: ['241100101', '231100101'],
+          items: ['2', '2'],
+          size: [5000000, 4000000],
+          isXBRL: [1, 1],
+          isInlineXBRL: [1, 1],
+          primaryDocument: ['nvda-20240731.htm', 'nvda-20230731.htm'],
+          primaryDocDescription: ['10-Q', '10-Q'],
+        },
+        files: [],
+      },
+    };
+    mockSecClient.getSubmissions.mockResolvedValue(columnarSubmission);
+
+    const filing = await resolver.findLatestFiling('0000001045810', '10-Q');
+
+    expect(filing.accessionNumber).toBe('0001045810-24-000100');
+    expect(filing.primaryDocument).toBe('nvda-20240731.htm');
+  });
+
   it('should throw FilingNotFoundError when no matching filing exists', async () => {
     const emptySubmission: SecSubmission = {
       ...mockSubmission,

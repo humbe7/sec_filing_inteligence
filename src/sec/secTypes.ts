@@ -33,13 +33,36 @@ export interface SecSubmission {
     primaryDocumentDescription: string;
   };
   filings: {
-    recent: SecFiling[];
+    recent: SecRecentFilings;
     files: Array<{
       name: string;
       filingCount: number;
     }>;
   };
 }
+
+/**
+ * The SEC submissions endpoint returns recent filings as columns of values,
+ * rather than an array of filing objects.
+ */
+export interface SecFilingColumns {
+  accessionNumber: string[];
+  filingDate?: string[];
+  reportDate?: string[];
+  acceptanceDateTime?: string[];
+  act?: string[];
+  form?: string[];
+  fileNumber?: string[];
+  filmNumber?: string[];
+  items?: string[];
+  size?: number[];
+  isXBRL?: number[];
+  isInlineXBRL?: number[];
+  primaryDocument?: string[];
+  primaryDocDescription?: string[];
+}
+
+export type SecRecentFilings = SecFiling[] | SecFilingColumns;
 
 export interface SecFiling {
   accession_number: string;
